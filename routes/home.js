@@ -4,7 +4,7 @@ module.exports = function (router) {
 
     homeRoute.get(function (req, res) {
         var connectionString = process.env.TOKEN;
-        res.json({ message: 'My connection string is ' + connectionString });
+        res.json({ message: 'MP3 API is running' });
     });
 
     return router;
