@@ -9,6 +9,19 @@ module.exports = function (router) {
             String(new mongoose.Types.ObjectId(id)) === id;
     }
 
+    function getSelection(select) {
+        if (!select) return '';
+
+        var fields = select.replace(/,/g, ' ').trim();
+
+        if (!fields.split(/\s+/).includes('_id') &&
+            !fields.split(/\s+/).includes('-_id')) {
+            fields += ' -_id';
+        }
+
+        return fields;
+    }
+
     // GET all tasks with query parameter support
     router.route('/tasks').get(async function (req, res) {
         try {
@@ -109,7 +122,13 @@ module.exports = function (router) {
                 });
             }
 
-            var task = await Task.findById(req.params.id);
+            var query = Task.findById(req.params.id);
+
+            if (req.query.select) {
+                query = query.select(getSelection(req.query.select));
+            }
+
+            var task = await query;
 
             if (!task) {
                 return res.status(404).json({
@@ -310,6 +329,23 @@ module.exports = function (router) {
                     });
                 }
             }
+            if (body.assignedUserName !== undefined) {
+                if (typeof body.assignedUserName !== 'string') {
+                    return res.status(400).json({
+                        message: 'Invalid assigned user name',
+                        data: null
+                    });
+                }
+
+                var expectedName = newUser ? newUser.name : 'unassigned';
+
+                if (body.assignedUserName !== expectedName) {
+                    return res.status(400).json({
+                        message: 'Assigned user name does not match assigned user',
+                        data: null
+                    });
+                }
+            }
 
             var oldUserId = task.assignedUser;
 
@@ -394,10 +430,7 @@ module.exports = function (router) {
 
             await Task.findByIdAndDelete(task._id);
 
-            return res.status(200).json({
-                message: 'Task deleted successfully',
-                data: task
-            });
+            return res.status(204).send();
 
         } catch (err) {
             return res.status(500).json({
