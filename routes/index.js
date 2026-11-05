@@ -3,12 +3,14 @@
  */
 
 module.exports = function (app, router) {
-
-    // Register the home route
+    // Home route
     require('./home.js')(router);
 
-    // Register the user routes
+    // User routes
     require('./users.js')(router);
+
+    // Task routes
+    require('./tasks.js')(router);
 
     // Mount all routes under /api
     app.use('/api', router);

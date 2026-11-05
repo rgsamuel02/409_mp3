@@ -4,16 +4,90 @@ var Task = require('../models/task');
 
 module.exports = function (router) {
 
-    // GET all users
+    // GET all users with query parameter support
     router.route('/users').get(async function (req, res) {
         try {
-            var users = await User.find();
-            res.status(200).json({
+            // Parse where parameter
+            var where = {};
+
+            if (req.query.where) {
+                where = JSON.parse(req.query.where);
+
+                if (typeof where !== 'object' || where === null || Array.isArray(where)) {
+                    return res.status(400).json({
+                        message: 'Invalid where parameter',
+                        data: null
+                    });
+                }
+            }
+
+            // Parse sort parameter
+            var sort = {};
+
+            if (req.query.sort) {
+                sort = JSON.parse(req.query.sort);
+
+                if (typeof sort !== 'object' || sort === null || Array.isArray(sort)) {
+                    return res.status(400).json({
+                        message: 'Invalid sort parameter',
+                        data: null
+                    });
+                }
+            }
+
+            // Parse skip and limit
+            var skip = req.query.skip ? Number(req.query.skip) : 0;
+            var limit = req.query.limit ? Number(req.query.limit) : 0;
+
+            if (!Number.isInteger(skip) || skip < 0 ||
+                !Number.isInteger(limit) || limit < 0) {
+                return res.status(400).json({
+                    message: 'Skip and limit must be nonnegative integers',
+                    data: null
+                });
+            }
+
+            // Count matching users if count=true
+            if (req.query.count === 'true') {
+                var total = await User.countDocuments(where);
+
+                return res.status(200).json({
+                    message: 'User count retrieved successfully',
+                    data: total
+                });
+            }
+
+            // Build the Mongoose query
+            var query = User.find(where);
+
+            if (Object.keys(sort).length > 0)
+                query = query.sort(sort);
+
+            if (req.query.select)
+                query = query.select(req.query.select.replace(/,/g, ' '));
+
+            if (skip > 0)
+                query = query.skip(skip);
+
+            if (limit > 0)
+                query = query.limit(limit);
+
+            var users = await query;
+
+            return res.status(200).json({
                 message: 'Users retrieved successfully',
                 data: users
             });
+
         } catch (err) {
-            res.status(500).json({
+            if (err instanceof SyntaxError) {
+                return res.status(400).json({
+                    message: 'Invalid JSON in where or sort parameter',
+                    data: null
+                });
+            }
+
+            return res.status(500).json({
                 message: 'Error retrieving users',
                 data: null
             });

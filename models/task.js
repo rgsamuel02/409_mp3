@@ -1,12 +1,18 @@
 var mongoose = require('mongoose');
 
 var TaskSchema = new mongoose.Schema({
-    name: String,
+    name: {
+        type: String,
+        required: true
+    },
     description: {
         type: String,
         default: ""
     },
-    deadline: Date,
+    deadline: {
+        type: Date,
+        required: true
+    },
     completed: {
         type: Boolean,
         default: false
